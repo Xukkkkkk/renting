@@ -177,3 +177,24 @@ test('location API returns reverse geocoded location from coordinates or IP', as
   assert.equal((await fetch(`${root}/api/location`, { method: 'DELETE' })).status, 405);
 });
 
+test('subway normalization, aliases and listing subway filtering', () => {
+  const query = search.normalizeQuery({ city: '北京', subway: '10号线' });
+  assert.equal(query.subway, '10号线');
+
+  const terms = search.subwaySearchTerms('10号线');
+  assert.ok(terms.includes('10号线'));
+  assert.ok(terms.includes('十号线'));
+
+  const slashTerms = search.subwaySearchTerms('1号线/八通线');
+  assert.ok(slashTerms.includes('1号线'));
+  assert.ok(slashTerms.includes('八通线'));
+
+  assert.equal(listingMatchesQuery({ title: '近地铁十号线双井站', address: '双井' }, query), true);
+  assert.equal(listingMatchesQuery({ title: '近地铁10号线双井站', address: '双井' }, query), true);
+  assert.equal(listingMatchesQuery({ title: '近地铁13号线望京西站', address: '望京' }, query), false);
+  assert.equal(listingMatchesQuery({ title: '普通住宅无地铁信息', address: '平谷' }, query), false);
+
+  const lianjiaUrl = search.makePlatformSearchUrl('链家', query, 1);
+  assert.match(decodeURIComponent(lianjiaUrl), /10号线/);
+});
+

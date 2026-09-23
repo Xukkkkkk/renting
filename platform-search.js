@@ -169,6 +169,7 @@ function normalizeQuery(input = {}) {
   const layout = typeof input.layout === 'string' ? input.layout.trim().slice(0, 80) : '';
   const commute = typeof input.commute === 'string' ? input.commute.trim().slice(0, 120) : '';
   const keyword = typeof input.keyword === 'string' ? input.keyword.trim().slice(0, 120) : '';
+  const subway = typeof input.subway === 'string' ? input.subway.trim().slice(0, 80) : '';
   const derivedDistrict = cityInput.replace(city.name, '').replace(/^[市\s·,，/|-]+|[\s·,，/|-]+$/g, '').trim();
   const district = typeof input.district === 'string' ? input.district.trim().slice(0, 80) : derivedDistrict.slice(0, 80);
   const pagesRaw = input.pages === undefined ? 1 : Number(input.pages);
@@ -186,6 +187,7 @@ function normalizeQuery(input = {}) {
     city: city.name,
     citySlug: city.slug,
     district,
+    subway,
     rentMin: rent.min,
     rentMax: rent.max,
     areaMin: area.min,
@@ -199,12 +201,36 @@ function normalizeQuery(input = {}) {
   };
 }
 
+function subwaySearchTerms(line) {
+  if (!line) return [];
+  const cleanLine = String(line).trim();
+  const terms = new Set([cleanLine]);
+  const numMatch = cleanLine.match(/(\d+)号线/);
+  if (numMatch) {
+    const num = numMatch[1];
+    const cnDigits = { '1': '一', '2': '二', '3': '三', '4': '四', '5': '五', '6': '六', '7': '七', '8': '八', '9': '九', '10': '十', '11': '十一', '12': '十二', '13': '十三', '14': '十四', '15': '十五', '16': '十六', '17': '十七', '18': '十八', '19': '十九', '20': '二十', '21': '二十一', '22': '二十二' };
+    if (cnDigits[num]) terms.add(`${cnDigits[num]}号线`);
+  }
+  const cnMatch = cleanLine.match(/([一二三四五六七八九十]+)号线/);
+  if (cnMatch) {
+    const cn = cnMatch[1];
+    const numDigits = { '一': '1', '二': '2', '三': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9', '十': '10', '十一': '11', '十二': '12', '十三': '13', '十四': '14', '十五': '15', '十六': '16', '十七': '17', '十八': '18', '十九': '19', '二十': '20' };
+    if (numDigits[cn]) terms.add(`${numDigits[cn]}号线`);
+  }
+  if (cleanLine.includes('/')) {
+    cleanLine.split('/').forEach((part) => {
+      if (part.trim()) terms.add(part.trim());
+    });
+  }
+  return Array.from(terms);
+}
+
 function numericPath(value) {
   return value === null || value === undefined ? '' : String(value).replace(/\.0+$/, '');
 }
 
 function queryKeyword(query) {
-  return [query.district, query.keyword].filter(Boolean).join(' ').trim();
+  return [query.district, query.subway, query.keyword].filter(Boolean).join(' ').trim();
 }
 
 function makePlatformSearchUrl(source, query, page = 1) {
@@ -837,6 +863,7 @@ module.exports = {
   parseXianyuHtml,
   parseGenericPlatformHtml,
   parsePlatformHtml,
+  subwaySearchTerms,
   htmlDecode,
   clean,
 };

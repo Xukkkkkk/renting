@@ -9,6 +9,70 @@
   const CITY_SLUGS = { 北京: "bj", 上海: "sh", 广州: "gz", 深圳: "sz", 杭州: "hz", 成都: "cd", 南京: "nj", 武汉: "wh", 西安: "xa", 重庆: "cq", 天津: "tj", 苏州: "su", 厦门: "xm", 济南: "jn", 郑州: "zz", 青岛: "qd", 宁波: "nb", 无锡: "wx", 昆明: "km", 福州: "fz", 长沙: "cs", 合肥: "hf", 佛山: "fs", 东莞: "dg", 香港: "hk" };
   const CITIES = Object.keys(CITY_SLUGS);
 
+  const CITY_SUBWAYS = Object.freeze({
+    北京: ["1号线/八通线", "2号线", "4号线/大兴线", "5号线", "6号线", "7号线", "8号线", "9号线", "10号线", "11号线", "13号线", "14号线", "15号线", "16号线", "17号线", "19号线", "昌平线", "房山线", "亦庄线", "燕房线", "S1线", "首都机场线", "大兴机场线"],
+    上海: ["1号线", "2号线", "3号线", "4号线", "5号线", "6号线", "7号线", "8号线", "9号线", "10号线", "11号线", "12号线", "13号线", "14号线", "15号线", "16号线", "17号线", "18号线", "浦江线", "磁浮线"],
+    广州: ["1号线", "2号线", "3号线", "3号线北延段", "4号线", "5号线", "6号线", "7号线", "8号线", "9号线", "13号线", "14号线", "18号线", "21号线", "22号线", "广佛线", "APM线"],
+    深圳: ["1号线", "2号线", "3号线", "4号线", "5号线", "6号线", "6号线支线", "7号线", "8号线", "9号线", "10号线", "11号线", "12号线", "14号线", "16号线", "20号线"],
+    杭州: ["1号线", "2号线", "3号线", "4号线", "5号线", "6号线", "7号线", "8号线", "9号线", "10号线", "16号线", "19号线"],
+    成都: ["1号线", "2号线", "3号线", "4号线", "5号线", "6号线", "7号线", "8号线", "9号线", "10号线", "17号线", "18号线", "19号线", "有轨电车蓉2号线"],
+    武汉: ["1号线", "2号线", "3号线", "4号线", "5号线", "6号线", "7号线", "8号线", "11号线", "16号线", "阳逻线"],
+    南京: ["1号线", "2号线", "3号线", "4号线", "7号线", "10号线", "S1号线", "S3号线", "S6号线", "S7号线", "S8号线", "S9号线"],
+    西安: ["1号线", "2号线", "3号线", "4号线", "5号线", "6号线", "9号线", "14号线", "16号线"],
+    重庆: ["环线", "1号线", "2号线", "3号线", "4号线", "5号线", "6号线", "9号线", "10号线", "国博线"],
+    天津: ["1号线", "2号线", "3号线", "4号线", "5号线", "6号线", "8号线", "9号线", "10号线"],
+    苏州: ["1号线", "2号线", "3号线", "4号线", "5号线", "11号线"],
+    长沙: ["1号线", "2号线", "3号线", "4号线", "5号线", "6号线", "磁浮快线"],
+    郑州: ["1号线", "2号线", "3号线", "4号线", "5号线", "14号线", "城郊线"],
+    青岛: ["1号线", "2号线", "3号线", "4号线", "8号线", "11号线", "13号线"],
+    合肥: ["1号线", "2号线", "3号线", "4号线", "5号线"],
+    佛山: ["广佛线", "2号线", "3号线"],
+    东莞: ["2号线"],
+    宁波: ["1号线", "2号线", "3号线", "4号线", "5号线"],
+    无锡: ["1号线", "2号线", "3号线", "4号线", "S1线"],
+    昆明: ["1号线", "2号线", "3号线", "4号线", "5号线", "6号线"],
+    福州: ["1号线", "2号线", "4号线", "5号线", "6号线"],
+    厦门: ["1号线", "2号线", "3号线"],
+    济南: ["1号线", "2号线", "3号线"],
+    香港: ["港岛线", "荃湾线", "观塘线", "南港岛线", "将军澳线", "东涌线", "迪士尼线", "机场快线", "东铁线", "屯马线"]
+  });
+
+  function subwaySearchTerms(line) {
+    if (!line) return [];
+    const cleanLine = String(line).trim();
+    const terms = new Set([cleanLine]);
+    const numMatch = cleanLine.match(/(\d+)号线/);
+    if (numMatch) {
+      const num = numMatch[1];
+      const cnDigits = { "1": "一", "2": "二", "3": "三", "4": "四", "5": "五", "6": "六", "7": "七", "8": "八", "9": "九", "10": "十", "11": "十一", "12": "十二", "13": "十三", "14": "十四", "15": "十五", "16": "十六", "17": "十七", "18": "十八", "19": "十九", "20": "二十", "21": "二十一", "22": "二十二" };
+      if (cnDigits[num]) terms.add(`${cnDigits[num]}号线`);
+    }
+    const cnMatch = cleanLine.match(/([一二三四五六七八九十]+)号线/);
+    if (cnMatch) {
+      const cn = cnMatch[1];
+      const numDigits = { "一": "1", "二": "2", "三": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "十": "10", "十一": "11", "十二": "12", "十三": "13", "十四": "14", "十五": "15", "十六": "16", "十七": "17", "十八": "18", "十九": "19", "二十": "20" };
+      if (numDigits[cn]) terms.add(`${numDigits[cn]}号线`);
+    }
+    if (cleanLine.includes("/")) {
+      cleanLine.split("/").forEach(part => {
+        if (part.trim()) terms.add(part.trim());
+      });
+    }
+    return Array.from(terms);
+  }
+
+  function extractSubway(text = "") {
+    const match = String(text).match(/(?:(?:近|距离|距)?(?:地铁)?([0-9一二三四五六七八九十]+号线|[^\s/，,·|]+线)(?:[^\s/，,·|]+站)?(?:[0-9]+米)?)/);
+    return match ? match[0].trim() : "";
+  }
+
+  function matchesSubway(item, wanted) {
+    if (!wanted) return true;
+    const terms = subwaySearchTerms(wanted);
+    const content = `${item.subway || ""} ${item.title || ""} ${item.location || ""} ${item.address || ""} ${item.raw || ""}`;
+    return terms.some(term => content.includes(term));
+  }
+
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
   const numberOrNull = value => value === null || value === undefined || String(value).trim() === "" || !Number.isFinite(Number(value)) ? null : Number(value);
@@ -73,7 +137,9 @@
   function normalizeStoredListing(item) {
     if (!item || typeof item !== "object" || !SOURCES.includes(item.source)) return null;
     if (String(item.id || "").startsWith("sample-")) return null;
-    return { ...item, id: stableKey(item), stableKey: stableKey(item), city: cityParts(item.city || "").city || item.city || "", rent: numberOrNull(item.rent), rentMin: numberOrNull(item.rentMin), rentMax: numberOrNull(item.rentMax), favorite: Boolean(item.favorite), createdAt: item.createdAt || Date.now() };
+    const wholeRaw = `${item.raw || ""} ${item.title || ""} ${item.location || ""} ${item.address || ""}`;
+    const subway = item.subway || extractSubway(wholeRaw);
+    return { ...item, id: stableKey(item), stableKey: stableKey(item), city: cityParts(item.city || "").city || item.city || "", subway: subway || "", rent: numberOrNull(item.rent), rentMin: numberOrNull(item.rentMin), rentMax: numberOrNull(item.rentMax), favorite: Boolean(item.favorite), createdAt: item.createdAt || Date.now() };
   }
 
   function dedupeListings(list) {
@@ -94,7 +160,7 @@
   }
 
   function loadFilters() {
-    const defaults = { city: "", rentMin: "", rentMax: "", layout: "", area: "", areaMin: "", areaMax: "", commute: "", commuteMaxKm: "", pages: "1", sources: [...DEFAULT_SOURCES] };
+    const defaults = { city: "", subway: "", rentMin: "", rentMax: "", layout: "", area: "", areaMin: "", areaMax: "", commute: "", commuteMaxKm: "", pages: "1", sources: [...DEFAULT_SOURCES] };
     try {
       const saved = JSON.parse(localStorage.getItem(FILTER_KEY));
       const filters = saved && typeof saved === "object" ? { ...defaults, ...saved } : defaults;
@@ -111,9 +177,32 @@
     } catch (_) { /* local storage may be unavailable in private browsing */ }
   }
 
+  function updateSubwayOptions(cityName) {
+    const city = cityParts(cityName).city || "";
+    const select = $("#subwaySelect");
+    const container = $("#subwayQuickTags");
+    if (!select) return;
+    const current = state.filters.subway || select.value || "";
+    const lines = CITY_SUBWAYS[city] || [];
+    select.innerHTML = `<option value="">${lines.length ? "不限地铁线路" : "该城市暂无预设地铁线"}</option>` +
+      lines.map(line => `<option value="${escapeHtml(line)}">${escapeHtml(line)}</option>`).join("");
+    if (lines.includes(current)) {
+      select.value = current;
+    } else {
+      select.value = "";
+      state.filters.subway = "";
+    }
+    if (container) {
+      const popular = lines.slice(0, 4);
+      container.innerHTML = popular.map(line => `<button type="button" data-subway="${escapeHtml(line)}">${escapeHtml(line)}</button>`).join("");
+    }
+  }
+
   function applyFiltersToForm() {
     const f = state.filters;
     $("#cityInput").value = f.city;
+    updateSubwayOptions(f.city);
+    if ($("#subwaySelect")) $("#subwaySelect").value = f.subway || "";
     $("#rentMin").value = f.rentMin;
     $("#rentMax").value = f.rentMax;
     $("#layoutSelect").value = f.layout;
@@ -130,6 +219,7 @@
     const previousTarget = currentCommuteKey();
     state.filters = {
       city: $("#cityInput").value.trim(),
+      subway: $("#subwaySelect")?.value || "",
       rentMin: $("#rentMin").value,
       rentMax: $("#rentMax").value,
       layout: $("#layoutSelect").value,
@@ -340,6 +430,7 @@
       if (state.favoriteOnly && !item.favorite) return false;
       if (f.sources.length === 0 || !f.sources.includes(item.source)) return false;
       if (!matchesCity(item, f.city)) return false;
+      if (!matchesSubway(item, f.subway)) return false;
       const rent = rentBounds(item); const budgetMin = numberOrNull(f.rentMin); const budgetMax = numberOrNull(f.rentMax);
       if ((budgetMin !== null || budgetMax !== null) && rent.min === null) return false;
       if (budgetMin !== null && rent.max < budgetMin) return false;
@@ -389,6 +480,7 @@
   function renderCard(item) {
     const link = item.link || state.platformLinks[item.source] || platformUrl(item.source, item.location || item.title);
     const commute = state.filters.commute ? `<a class="commute-chip" href="${escapeHtml(commuteLink(item))}" target="_blank" rel="noopener noreferrer" title="在地图中查看通勤地点">${icon("map-pin")}${escapeHtml(commuteText(item))}</a>` : `<span class="commute-chip">通勤待设置</span>`;
+    const subway = item.subway ? `<span class="subway-chip" title="${escapeHtml(item.subway)}">${icon("train-front")}${escapeHtml(item.subway)}</span>` : "";
     const photo = /^https?:\/\//i.test(item.image || "") ? `<a class="listing-photo" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" loading="lazy" referrerpolicy="no-referrer" /></a>` : "";
     const favoriteTitle = item.favorite ? "取消收藏" : "收藏房源";
     return `<article class="listing-card" data-id="${escapeHtml(item.id)}">
@@ -396,17 +488,18 @@
       <strong class="listing-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</strong>
       <div class="listing-location">${icon("map-pin")}<span title="${escapeHtml(item.location)}">${escapeHtml(item.location || "位置待补充")}</span></div>
       <div class="card-details"><div class="detail-item"><small>月租</small><strong class="rent">${formatRent(item)}</strong></div><div class="detail-item"><small>户型</small><strong>${escapeHtml(item.layout || "待确认")}</strong></div><div class="detail-item"><small>面积</small><strong>${item.area !== null && item.area !== undefined ? `${item.area}㎡` : "待确认"}</strong></div></div>
-      <div class="card-bottom">${commute}<div class="card-actions"><button class="icon-button" type="button" data-action="remove" aria-label="移除房源" title="移除房源">${icon("trash-2")}</button><a class="icon-button" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer" aria-label="打开原始房源" title="打开原始房源">${icon("external-link")}</a></div></div></div>
+      <div class="card-bottom"><div class="card-chips">${commute}${subway}</div><div class="card-actions"><button class="icon-button" type="button" data-action="remove" aria-label="移除房源" title="移除房源">${icon("trash-2")}</button><a class="icon-button" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer" aria-label="打开原始房源" title="打开原始房源">${icon("external-link")}</a></div></div></div>
     </article>`;
   }
 
   function updateQueryPreview() {
     const f = state.filters; const city = f.city || "未填写城市";
-    const rent = f.rentMin || f.rentMax ? `${f.rentMin || 0}–${f.rentMax || "不限"} 元/月` : "不限预算";
+    const subwayText = f.subway ? `　🚇 ${f.subway}` : "";
+    const rent = f.rentMin || f.rentMax ? `　${f.rentMin || 0}–${f.rentMax || "不限"} 元/月` : "　不限预算";
     const layout = f.layout || "不限户型"; const area = getAreaBounds();
     const areaText = area.min !== null || area.max !== null ? `　${area.min ?? 0}–${area.max ?? "不限"}㎡` : "";
     const commuteText = f.commute && numberOrNull(f.commuteMaxKm) !== null ? `　${f.commute} · 直线 ${f.commuteMaxKm} 公里内` : "";
-    $("#queryPreview").textContent = `${city}　${rent}　${layout}${areaText}${commuteText}`;
+    $("#queryPreview").textContent = `${city}${subwayText}${rent}　${layout}${areaText}${commuteText}`;
   }
 
   function platformUrl(platform, query = "") {
@@ -446,6 +539,8 @@
   }
 
   function normalizeRemoteListing(item, source, index, city) {
+    const wholeRaw = `${item.raw || ""} ${item.title || ""} ${item.address || item.district || item.location || ""}`;
+    const subway = item.subway || item.tags?.find?.(tag => /地铁|号线/.test(tag)) || extractSubway(wholeRaw);
     const normalized = {
       id: item.id || `${source}-${item.url || item.link || item.title || index}`,
       source,
@@ -453,7 +548,7 @@
       location: item.address || item.district || item.location || "位置待补充",
       city: item.city || city,
       rent: numberOrNull(item.rent), rentMin: numberOrNull(item.rentMin), rentMax: numberOrNull(item.rentMax), layout: item.layout || "待确认", area: numberOrNull(item.area), rentType: item.rentType || "", image: item.image || "",
-      subway: item.subway || item.tags?.find?.(tag => /地铁|号线/.test(tag)) || "",
+      subway: subway || "",
       contact: item.contact || "打开平台查看", link: item.url || item.link || platformUrl(source),
       distanceKm: numberOrNull(item.distanceKm), distanceTarget: item.distanceTarget || "", travelMinutes: numberOrNull(item.travelMinutes),
       coordinates: item.coordinates || null,
@@ -485,7 +580,7 @@
     const f = state.filters; const area = getAreaBounds();
     return fetchJson("/api/search", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ city: f.city, layout: f.layout, areaMin: area.min, areaMax: area.max, rentMin: numberOrNull(f.rentMin), rentMax: numberOrNull(f.rentMax), commute: f.commute, sources: f.sources, pages: Number(f.pages) || 1 })
+      body: JSON.stringify({ city: f.city, subway: f.subway, layout: f.layout, areaMin: area.min, areaMax: area.max, rentMin: numberOrNull(f.rentMin), rentMax: numberOrNull(f.rentMax), commute: f.commute, sources: f.sources, pages: Number(f.pages) || 1 })
     });
   }
 
@@ -596,6 +691,7 @@
       }
 
       $("#cityInput").value = location.cityFormatted;
+      updateSubwayOptions(location.cityFormatted);
       if (location.address || location.formatted) {
         $("#commuteInput").value = location.address || location.formatted;
       }
@@ -652,8 +748,8 @@
 
   function exportCsv() {
     const rows = getFilteredListings(); if (!rows.length) return;
-    const header = ["来源", "标题", "城市", "位置", "月租", "户型", "面积㎡", "通勤地点", "直线距离（公里）", "链接"];
-    const csvRows = [header, ...rows.map(item => [item.source, item.title, item.city, item.location, formatRent(item), item.layout, item.area ?? "", state.filters.commute, distanceValue(item) ?? "", item.link || ""] )];
+    const header = ["来源", "标题", "城市", "位置", "地铁线路", "月租", "户型", "面积㎡", "通勤地点", "直线距离（公里）", "链接"];
+    const csvRows = [header, ...rows.map(item => [item.source, item.title, item.city, item.location, item.subway || "", formatRent(item), item.layout, item.area ?? "", state.filters.commute, distanceValue(item) ?? "", item.link || ""] )];
     const cell = value => { const text = String(value ?? ""); const safe = /^[\s]*[=+@-]/.test(text) ? `'${text}` : text; return `"${safe.replace(/"/g, '""')}"`; };
     const csv = String.fromCharCode(0xfeff) + csvRows.map(row => row.map(cell).join(",")).join(String.fromCharCode(13, 10));
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `租住雷达-${new Date().toISOString().slice(0, 10)}.csv`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -699,7 +795,7 @@
     });
     $("#resetFilters").addEventListener("click", () => {
       cancelCommute(); state.commuteError = ""; state.commuteTarget = null; state.commuteCoordinates = null;
-      state.filters = { city: "", rentMin: "", rentMax: "", layout: "", area: "", areaMin: "", areaMax: "", commute: "", commuteMaxKm: "", pages: "1", sources: [...SOURCES] }; state.favoriteOnly = false; applyFiltersToForm(); validateFilters(false); persist(); render(); showToast("筛选条件已重置");
+      state.filters = { city: "", subway: "", rentMin: "", rentMax: "", layout: "", area: "", areaMin: "", areaMax: "", commute: "", commuteMaxKm: "", pages: "1", sources: [...SOURCES] }; state.favoriteOnly = false; applyFiltersToForm(); validateFilters(false); persist(); render(); showToast("筛选条件已重置");
     });
     const applyQuietly = () => {
       readFilters();
@@ -708,10 +804,32 @@
         if (numberOrNull(state.filters.commuteMaxKm) !== null || state.filters.commute) void calculateCommute();
       }
     };
-    $$('[data-city]').forEach(button => button.addEventListener("click", () => { $("#cityInput").value = button.dataset.city; applyQuietly(); }));
+    $$('[data-city]').forEach(button => button.addEventListener("click", () => {
+      $("#cityInput").value = button.dataset.city;
+      updateSubwayOptions(button.dataset.city);
+      applyQuietly();
+    }));
     $$('[data-rent]').forEach(button => button.addEventListener("click", () => { const [min, max] = button.dataset.rent.split(","); $("#rentMin").value = min === "0" ? "" : min; $("#rentMax").value = max === "20000" ? "" : max; applyQuietly(); }));
     $$("input, select", $("#filtersForm")).forEach(control => control.addEventListener("change", applyQuietly));
-    [$("#cityInput"), $("#commuteInput")].forEach(control => control.addEventListener("input", () => { readFilters(); render(); }));
+    $("#cityInput").addEventListener("input", () => {
+      updateSubwayOptions($("#cityInput").value);
+      readFilters();
+      render();
+    });
+    $("#commuteInput").addEventListener("input", () => { readFilters(); render(); });
+    $("#subwaySelect")?.addEventListener("change", applyQuietly);
+    $("#clearSubway")?.addEventListener("click", () => {
+      if ($("#subwaySelect")) $("#subwaySelect").value = "";
+      applyQuietly();
+    });
+    $("#subwayQuickTags")?.addEventListener("click", event => {
+      const btn = event.target.closest("[data-subway]");
+      if (!btn) return;
+      if ($("#subwaySelect")) {
+        $("#subwaySelect").value = btn.dataset.subway;
+        applyQuietly();
+      }
+    });
     $$('[data-distance]').forEach(button => button.addEventListener("click", () => { $("#commuteMaxKm").value = button.dataset.distance; applyQuietly(); }));
     $("#clearCommuteRange").addEventListener("click", () => { $("#commuteMaxKm").value = ""; applyQuietly(); });
     $("#calculateCommuteBtn").addEventListener("click", () => { readFilters(); if (validateFilters(false)) void calculateCommute(true); });

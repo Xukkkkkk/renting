@@ -7,7 +7,8 @@
     "start": "node server.js",
     "test": "node --test tests/backend.test.js tests/commute.test.js tests/platforms.test.js",
     "test:ui": "node tests/ui-check.js",
-    "test:commute-ui": "node tests/commute-ui.js"
+    "test:commute-ui": "node tests/commute-ui.js",
+    "test:subway-ui": "node tests/subway-ui.js"
   },
   "engines": {
     "node": ">=18.17"

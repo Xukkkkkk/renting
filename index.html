@@ -25,6 +25,19 @@
             <p class="validation-message" id="cityValidation" role="alert" hidden></p>
             <div class="quick-tags"><button type="button" data-city="北京 · 朝阳区">朝阳</button><button type="button" data-city="北京 · 海淀区">海淀</button><button type="button" data-city="北京 · 东城区">东城</button><button type="button" data-city="上海 · 静安区">静安</button></div>
           </div>
+          <div class="field-group subway-field">
+            <div class="field-label-row">
+              <label for="subwaySelect">地铁线路 <span class="unit">沿线筛选</span></label>
+              <button type="button" class="text-button" id="clearSubway" title="清除地铁线筛选">清除</button>
+            </div>
+            <div class="input-with-icon">
+              <i data-lucide="train-front" aria-hidden="true"></i>
+              <select id="subwaySelect">
+                <option value="">不限地铁线路</option>
+              </select>
+            </div>
+            <div class="quick-tags" id="subwayQuickTags" aria-label="快捷地铁线"></div>
+          </div>
           <div class="field-group"><label>月租预算 <span class="unit">元 / 月</span></label><div class="range-inputs"><input id="rentMin" type="number" min="0" step="100" placeholder="最低" aria-label="最低月租" /><span>至</span><input id="rentMax" type="number" min="0" step="100" placeholder="最高" aria-label="最高月租" /></div><p class="validation-message" id="rentValidation" role="alert" hidden></p><div class="range-hint"><button type="button" data-rent="0,4000">4k 以下</button><button type="button" data-rent="4000,6000">4–6k</button><button type="button" data-rent="6000,9000">6–9k</button><button type="button" data-rent="9000,20000">9k 以上</button></div></div>
           <div class="field-group split-fields"><div><label for="layoutSelect">户型</label><select id="layoutSelect"><option value="">不限户型</option><option value="一室一厅">一室一厅</option><option value="两室一厅">两室一厅</option><option value="三室一厅">三室一厅</option><option value="开间">开间</option><option value="合租">合租</option></select></div><div><label for="areaSelect">面积</label><select id="areaSelect"><option value="">不限面积</option><option value="0,40">40㎡ 以下</option><option value="40,60">40–60㎡</option><option value="60,90">60–90㎡</option><option value="90,9999">90㎡ 以上</option></select></div></div>
           <div class="field-group"><label>自定义面积 <span class="unit">㎡ · 优先于预设</span></label><div class="range-inputs"><input id="areaMin" type="number" min="0" step="1" placeholder="最小" aria-label="最小面积" /><span>至</span><input id="areaMax" type="number" min="0" step="1" placeholder="最大" aria-label="最大面积" /></div><p class="validation-message" id="areaValidation" role="alert" hidden></p></div>

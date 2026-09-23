@@ -139,8 +139,18 @@ function listingMatchesQuery(listing, query) {
   const locationText = `${listing.address || ''} ${listing.location || ''}`;
   const district = String(query.district || '').replace(/[区县市]$/, '');
   if (district && !locationText.includes(district)) return false;
+  if (query.subway) {
+    const subwayTerms = search.subwaySearchTerms(query.subway);
+    const fullListingText = `${listing.title || ''} ${locationText} ${listing.raw || ''} ${listing.subway || ''}`;
+    if (!subwayTerms.some((term) => fullListingText.includes(term))) return false;
+  }
   if (query.keyword && !`${listing.title || ''} ${locationText} ${listing.raw || ''}`.includes(query.keyword)) return false;
   return true;
+}
+
+function extractSubway(text = '') {
+  const match = String(text).match(/(?:(?:近|距离|距)?(?:地铁)?([0-9一二三四五六七八九十]+号线|[^\s/，,·|]+线)(?:[^\s/，,·|]+站)?(?:[0-9]+米)?)/);
+  return match ? match[0].trim() : '';
 }
 
 function normalizeListing(item, source, city, index = 0) {
@@ -149,6 +159,8 @@ function normalizeListing(item, source, city, index = 0) {
   const id = item?.id || search.stableId(source, city, code, url || `${source}:${city}:${index}`);
   const rent = item?.rent === null || item?.rent === undefined || item?.rent === '' ? null : Number(item.rent);
   const area = item?.area === null || item?.area === undefined || item?.area === '' ? null : Number(item.area);
+  const wholeText = `${item?.raw || ''} ${item?.title || ''} ${item?.address || ''} ${item?.location || ''}`;
+  const subway = item?.subway || item?.tags?.find?.((tag) => /地铁|号线/.test(tag)) || extractSubway(wholeText);
   return {
     source,
     city,
@@ -159,6 +171,7 @@ function normalizeListing(item, source, city, index = 0) {
     rent: Number.isFinite(rent) ? rent : null,
     area: Number.isFinite(area) ? area : null,
     layout: item?.layout ? String(item.layout) : null,
+    subway: subway || null,
     url,
     fetchedAt: item?.fetchedAt || new Date().toISOString(),
     ...(item?.rentMin !== undefined ? { rentMin: item.rentMin } : {}),
