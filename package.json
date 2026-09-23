@@ -1,0 +1,21 @@
+{
+  "name": "rent-radar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "本地租房搜索与筛选工具",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/backend.test.js tests/commute.test.js tests/platforms.test.js",
+    "test:ui": "node tests/ui-check.js",
+    "test:commute-ui": "node tests/commute-ui.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "geolib": "^3.3.4",
+    "lucide": "^1.47.0",
+    "playwright": "^1.55.1"
+  }
+}

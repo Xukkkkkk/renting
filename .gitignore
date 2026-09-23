@@ -1,0 +1,6 @@
+node_modules/
+.browser-profile/
+.runtime/
+test-results/
+*.log
+.env

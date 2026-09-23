@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>租住雷达 · 租房工作台</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="/vendor/lucide.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="#top"><i data-lucide="house" aria-hidden="true"></i><strong>租住雷达</strong></a><span class="adapter-label" role="status">正在连接本地服务</span></header>
+  <main id="top" class="page-content">
+    <div class="page-heading"><h1>租房工作台</h1><span>全网聚合 · 链家 / 贝壳 / 安居客 / 58同城 / 自如 / Wellcee / 小红书 / 豆瓣租房 / 闲鱼 / 房天下</span></div>
+    <div class="workspace-grid">
+      <aside class="filters-panel" aria-labelledby="filterTitle">
+        <div class="panel-heading"><h2 id="filterTitle">筛选条件</h2><button type="button" class="text-button" id="resetFilters">重置</button></div>
+        <form id="filtersForm" autocomplete="off">
+          <div class="field-group"><label for="cityInput">城市 / 区域</label><div class="input-with-icon"><i data-lucide="map-pin" aria-hidden="true"></i><input id="cityInput" type="text" placeholder="北京 · 朝阳区" /></div><p class="validation-message" id="cityValidation" role="alert" hidden></p><div class="quick-tags"><button type="button" data-city="北京 · 朝阳区">朝阳</button><button type="button" data-city="北京 · 海淀区">海淀</button><button type="button" data-city="北京 · 东城区">东城</button><button type="button" data-city="上海 · 静安区">静安</button></div></div>
+          <div class="field-group"><label>月租预算 <span class="unit">元 / 月</span></label><div class="range-inputs"><input id="rentMin" type="number" min="0" step="100" placeholder="最低" aria-label="最低月租" /><span>至</span><input id="rentMax" type="number" min="0" step="100" placeholder="最高" aria-label="最高月租" /></div><p class="validation-message" id="rentValidation" role="alert" hidden></p><div class="range-hint"><button type="button" data-rent="0,4000">4k 以下</button><button type="button" data-rent="4000,6000">4–6k</button><button type="button" data-rent="6000,9000">6–9k</button><button type="button" data-rent="9000,20000">9k 以上</button></div></div>
+          <div class="field-group split-fields"><div><label for="layoutSelect">户型</label><select id="layoutSelect"><option value="">不限户型</option><option value="一室一厅">一室一厅</option><option value="两室一厅">两室一厅</option><option value="三室一厅">三室一厅</option><option value="开间">开间</option><option value="合租">合租</option></select></div><div><label for="areaSelect">面积</label><select id="areaSelect"><option value="">不限面积</option><option value="0,40">40㎡ 以下</option><option value="40,60">40–60㎡</option><option value="60,90">60–90㎡</option><option value="90,9999">90㎡ 以上</option></select></div></div>
+          <div class="field-group"><label>自定义面积 <span class="unit">㎡ · 优先于预设</span></label><div class="range-inputs"><input id="areaMin" type="number" min="0" step="1" placeholder="最小" aria-label="最小面积" /><span>至</span><input id="areaMax" type="number" min="0" step="1" placeholder="最大" aria-label="最大面积" /></div><p class="validation-message" id="areaValidation" role="alert" hidden></p></div>
+          <div class="field-group"><label for="pagesSelect">抓取页数 <span class="unit">每个平台</span></label><select id="pagesSelect"><option value="1">1 页</option><option value="2">2 页</option><option value="3">3 页</option></select></div>
+          <div class="field-group commute-field"><label for="commuteInput">通勤地点 <span class="unit">可选</span></label><div class="input-with-icon"><i data-lucide="briefcase-business" aria-hidden="true"></i><input id="commuteInput" type="text" placeholder="国贸、望京 SOHO" /></div></div>
+          <div class="field-group commute-range-field">
+            <label for="commuteMaxKm">通勤范围 <span class="unit">直线距离 · 公里</span></label>
+            <div class="commute-range-controls"><input id="commuteMaxKm" type="number" min="0.1" max="100" step="0.1" placeholder="不限距离" aria-label="最大通勤直线距离（公里）" /><button class="icon-button" id="clearCommuteRange" type="button" title="取消距离限制" aria-label="取消距离限制"><i data-lucide="x" aria-hidden="true"></i></button></div>
+            <div class="quick-tags" aria-label="通勤距离快捷选项"><button type="button" data-distance="1">1 公里</button><button type="button" data-distance="3">3 公里</button><button type="button" data-distance="5">5 公里</button><button type="button" data-distance="10">10 公里</button></div>
+            <p class="validation-message" id="commuteValidation" role="alert" hidden></p>
+            <button class="secondary-button full-width commute-calculate" id="calculateCommuteBtn" type="button"><i data-lucide="locate-fixed" aria-hidden="true"></i>计算通勤距离</button>
+            <p id="commuteStatus" class="commute-status" role="status" aria-live="polite">距离未计算</p>
+            <span class="map-attribution">地图数据 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap</a></span>
+          </div>
+          <div class="field-group source-checks">
+            <div class="source-header">
+              <label>信息来源</label>
+              <div class="source-presets">
+                <button type="button" data-preset="all">全选</button>
+                <button type="button" data-preset="mainstream">主流门户</button>
+                <button type="button" data-preset="quality">品质涉外</button>
+                <button type="button" data-preset="direct">社交直租</button>
+                <button type="button" data-preset="none">清空</button>
+              </div>
+            </div>
+            <div class="checkbox-row">
+              <label><input type="checkbox" value="链家" checked />链家</label>
+              <label><input type="checkbox" value="贝壳" checked />贝壳</label>
+              <label><input type="checkbox" value="安居客" />安居客</label>
+              <label><input type="checkbox" value="58同城" />58同城</label>
+              <label><input type="checkbox" value="自如" />自如</label>
+              <label><input type="checkbox" value="Wellcee" />Wellcee</label>
+              <label><input type="checkbox" value="小红书" checked />小红书</label>
+              <label><input type="checkbox" value="豆瓣租房" />豆瓣租房</label>
+              <label><input type="checkbox" value="闲鱼" />闲鱼</label>
+              <label><input type="checkbox" value="房天下" />房天下</label>
+            </div>
+          </div>
+          <button class="secondary-button full-width" type="submit" title="应用筛选条件"><i data-lucide="list-filter" aria-hidden="true"></i>应用筛选</button>
+        </form>
+      </aside>
+      <div class="results-column">
+        <section class="search-section" aria-labelledby="searchTitle"><div><h2 id="searchTitle">搜索房源</h2><p id="queryPreview">未填写城市</p></div><button class="primary-button" type="button" id="runSearchBtn" title="自动获取所选平台的房源"><i data-lucide="search" aria-hidden="true"></i>开始自动获取</button></section>
+        <section class="platform-status-section" aria-labelledby="platformTitle">
+          <div class="section-inline-heading"><h2 id="platformTitle">平台状态</h2><span id="lastRun">尚未开始获取</span></div>
+          <div class="platform-grid">
+            <article class="platform-card" data-platform="链家"><div class="platform-card-top"><span class="platform-logo lianjia-logo">链</span><strong>链家</strong><span class="status-badge status-idle">待连接</span></div><p class="platform-message">正在检查本地服务</p><a href="#" class="platform-link" data-search-platform="链家" target="_blank" rel="noopener noreferrer" title="打开链家搜索页面">平台搜索<i data-lucide="external-link" aria-hidden="true"></i></a></article>
+            <article class="platform-card" data-platform="贝壳"><div class="platform-card-top"><span class="platform-logo beike-logo">贝</span><strong>贝壳</strong><span class="status-badge status-idle">待连接</span></div><p class="platform-message">正在检查本地服务</p><a href="#" class="platform-link" data-search-platform="贝壳" target="_blank" rel="noopener noreferrer" title="打开贝壳搜索页面">平台搜索<i data-lucide="external-link" aria-hidden="true"></i></a></article>
+            <article class="platform-card" data-platform="安居客"><div class="platform-card-top"><span class="platform-logo anjuke-logo">安</span><strong>安居客</strong><span class="status-badge status-idle">待连接</span></div><p class="platform-message">海量经纪与房东房源</p><a href="#" class="platform-link" data-search-platform="安居客" target="_blank" rel="noopener noreferrer" title="打开安居客搜索页面">平台搜索<i data-lucide="external-link" aria-hidden="true"></i></a></article>
+            <article class="platform-card" data-platform="58同城"><div class="platform-card-top"><span class="platform-logo wubai-logo">58</span><strong>58同城</strong><span class="status-badge status-idle">待连接</span></div><p class="platform-message">个人直租与性价比房源</p><a href="#" class="platform-link" data-search-platform="58同城" target="_blank" rel="noopener noreferrer" title="打开58同城搜索页面">平台搜索<i data-lucide="external-link" aria-hidden="true"></i></a></article>
+            <article class="platform-card" data-platform="自如"><div class="platform-card-top"><span class="platform-logo ziroom-logo">自</span><strong>自如</strong><span class="status-badge status-idle">待连接</span></div><p class="platform-message">品质长租公寓 · 统一装修</p><a href="#" class="platform-link" data-search-platform="自如" target="_blank" rel="noopener noreferrer" title="打开自如搜索页面">平台搜索<i data-lucide="external-link" aria-hidden="true"></i></a></article>
+            <article class="platform-card" data-platform="Wellcee"><div class="platform-card-top"><span class="platform-logo wellcee-logo">W</span><strong>Wellcee</strong><span class="status-badge status-idle">待连接</span></div><p class="platform-message">唯心所寓 · 零中介费涉外社区</p><a href="#" class="platform-link" data-search-platform="Wellcee" target="_blank" rel="noopener noreferrer" title="打开Wellcee搜索页面">平台搜索<i data-lucide="external-link" aria-hidden="true"></i></a></article>
+            <article class="platform-card" data-platform="小红书"><div class="platform-card-top"><span class="platform-logo xhs-logo">红</span><strong>小红书</strong><span class="status-badge status-idle">待连接</span></div><p class="platform-message">在本地浏览器登录后搜索</p><div class="platform-card-actions"><button class="platform-login-button" type="button" data-action="xhs-login" title="打开本地小红书登录浏览器"><i data-lucide="log-in" aria-hidden="true"></i>打开小红书</button><a href="#" class="platform-link" data-search-platform="小红书" target="_blank" rel="noopener noreferrer" aria-label="打开小红书搜索页面" title="打开小红书搜索页面"><i data-lucide="external-link" aria-hidden="true"></i></a></div></article>
+            <article class="platform-card" data-platform="豆瓣租房"><div class="platform-card-top"><span class="platform-logo douban-logo">豆</span><strong>豆瓣租房</strong><span class="status-badge status-idle">待连接</span></div><p class="platform-message">青年同城小组 · 真实转租</p><a href="#" class="platform-link" data-search-platform="豆瓣租房" target="_blank" rel="noopener noreferrer" title="打开豆瓣租房搜索页面">平台搜索<i data-lucide="external-link" aria-hidden="true"></i></a></article>
+            <article class="platform-card" data-platform="闲鱼"><div class="platform-card-top"><span class="platform-logo xianyu-logo">鱼</span><strong>闲鱼</strong><span class="status-badge status-idle">待连接</span></div><p class="platform-message">个人闲置转租 · 房东直接沟通</p><a href="#" class="platform-link" data-search-platform="闲鱼" target="_blank" rel="noopener noreferrer" title="打开闲鱼搜索页面">平台搜索<i data-lucide="external-link" aria-hidden="true"></i></a></article>
+            <article class="platform-card" data-platform="房天下"><div class="platform-card-top"><span class="platform-logo fang-logo">房</span><strong>房天下</strong><span class="status-badge status-idle">待连接</span></div><p class="platform-message">资深房产门户 · 全国房源行情</p><a href="#" class="platform-link" data-search-platform="房天下" target="_blank" rel="noopener noreferrer" title="打开房天下搜索页面">平台搜索<i data-lucide="external-link" aria-hidden="true"></i></a></article>
+          </div>
+        </section>
+        <section class="summary-row" aria-label="房源统计"><div><small>已保存</small><strong id="totalCount">0</strong></div><div><small>当前匹配</small><strong id="filteredCount">0</strong></div><div><small>确定租金均值</small><strong id="avgRent">—</strong></div><div><small>已收藏</small><strong id="favoriteCount">0</strong><button id="showFavorites" class="text-button" type="button">查看</button></div></section>
+        <section class="list-section" aria-labelledby="listTitle"><div class="list-toolbar"><h2 id="listTitle">房源清单 <span id="listCountLabel">0 条</span></h2><div class="toolbar-actions"><button class="icon-button" id="exportCsvBtn" type="button" disabled title="导出当前结果为 CSV" aria-label="导出 CSV"><i data-lucide="download" aria-hidden="true"></i></button><div class="view-switch"><button class="icon-button view-toggle active" type="button" data-view="cards" aria-label="卡片视图" title="卡片视图"><i data-lucide="layout-grid" aria-hidden="true"></i></button><button class="icon-button view-toggle" type="button" data-view="table" aria-label="列表视图" title="列表视图"><i data-lucide="list" aria-hidden="true"></i></button></div><label class="sort-select"><span class="sr-only">排序</span><select id="sortSelect"><option value="default">最新加入</option><option value="rentAsc">租金从低到高</option><option value="rentDesc">租金从高到低</option><option value="areaDesc">面积从大到小</option><option value="distanceAsc">通勤距离从近到远</option></select></label></div></div><div id="resultsList" class="results-list"></div><div id="emptyState" class="empty-state"><i data-lucide="house" aria-hidden="true"></i><h3>暂无房源</h3><p>尚未开始搜索。</p></div></section>
+      </div>
+    </div>
+  </main>
+  <footer class="site-footer">房源信息以原平台最新内容为准</footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
