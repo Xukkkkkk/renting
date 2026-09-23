@@ -139,3 +139,41 @@ test('commute API uses the canonical city and preserves unresolved distances', a
   assert.equal(payload.listings[0].distanceKm, null);
   assert.equal((await fetch(`${root}/api/commute`)).status, 405);
 });
+
+test('location API returns reverse geocoded location from coordinates or IP', async (t) => {
+  let queriedCoords;
+  const server = createServer({
+    commuteService: {
+      reverseGeocode: async (coords) => {
+        queriedCoords = coords;
+        return { city: '北京', district: '东城区', cityFormatted: '北京 · 东城区', address: '王府井' };
+      },
+      locateIp: async () => {
+        return { city: '上海', district: '黄浦区', cityFormatted: '上海 · 黄浦区', address: '南京路' };
+      }
+    }
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const root = `http://127.0.0.1:${server.address().port}`;
+
+  const res1 = await fetch(`${root}/api/location`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ latitude: 39.9, longitude: 116.4 })
+  });
+  assert.equal(res1.status, 200);
+  const data1 = await res1.json();
+  assert.equal(data1.ok, true);
+  assert.equal(data1.location.cityFormatted, '北京 · 东城区');
+  assert.deepEqual(queriedCoords, { latitude: 39.9, longitude: 116.4 });
+
+  const res2 = await fetch(`${root}/api/location`, { method: 'GET' });
+  assert.equal(res2.status, 200);
+  const data2 = await res2.json();
+  assert.equal(data2.ok, true);
+  assert.equal(data2.location.cityFormatted, '上海 · 黄浦区');
+
+  assert.equal((await fetch(`${root}/api/location`, { method: 'DELETE' })).status, 405);
+});
+

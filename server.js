@@ -424,6 +424,27 @@ function createApiHandler(options = {}) {
         const result = await context.commuteService.calculate({ ...body, city });
         sendJson(response, 200, { ok: true, ...result }); return;
       }
+      if (parsed.pathname === '/api/location' || parsed.pathname === '/api/location/reverse') {
+        if (request.method !== 'POST' && request.method !== 'GET') {
+          throw new ApiError(405, '只支持 GET 或 POST /api/location', 'METHOD_NOT_ALLOWED');
+        }
+        let location;
+        if (request.method === 'POST') {
+          const body = await readJsonBody(request);
+          if (body.latitude !== undefined && body.longitude !== undefined) {
+            location = await context.commuteService.reverseGeocode({
+              latitude: body.latitude,
+              longitude: body.longitude,
+            });
+          } else {
+            location = await context.commuteService.locateIp();
+          }
+        } else {
+          location = await context.commuteService.locateIp();
+        }
+        sendJson(response, 200, { ok: true, location });
+        return;
+      }
       if (parsed.pathname === '/api/browser/open' || parsed.pathname === '/api/browser/close') {
         if (request.method !== 'POST') throw new ApiError(405, `只支持 POST ${parsed.pathname}`, 'METHOD_NOT_ALLOWED');
         const contentType = request.headers['content-type'] || '';

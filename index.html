@@ -16,18 +16,32 @@
       <aside class="filters-panel" aria-labelledby="filterTitle">
         <div class="panel-heading"><h2 id="filterTitle">筛选条件</h2><button type="button" class="text-button" id="resetFilters">重置</button></div>
         <form id="filtersForm" autocomplete="off">
-          <div class="field-group"><label for="cityInput">城市 / 区域</label><div class="input-with-icon"><i data-lucide="map-pin" aria-hidden="true"></i><input id="cityInput" type="text" placeholder="北京 · 朝阳区" /></div><p class="validation-message" id="cityValidation" role="alert" hidden></p><div class="quick-tags"><button type="button" data-city="北京 · 朝阳区">朝阳</button><button type="button" data-city="北京 · 海淀区">海淀</button><button type="button" data-city="北京 · 东城区">东城</button><button type="button" data-city="上海 · 静安区">静安</button></div></div>
+          <div class="field-group">
+            <div class="field-label-row">
+              <label for="cityInput">城市 / 区域</label>
+              <button type="button" class="text-button locate-btn" id="locateCityBtn" title="一键定位当前城市与具体地点"><i data-lucide="locate-fixed" aria-hidden="true"></i>定位当前地点</button>
+            </div>
+            <div class="input-with-icon"><i data-lucide="map-pin" aria-hidden="true"></i><input id="cityInput" type="text" placeholder="北京 · 朝阳区" /></div>
+            <p class="validation-message" id="cityValidation" role="alert" hidden></p>
+            <div class="quick-tags"><button type="button" data-city="北京 · 朝阳区">朝阳</button><button type="button" data-city="北京 · 海淀区">海淀</button><button type="button" data-city="北京 · 东城区">东城</button><button type="button" data-city="上海 · 静安区">静安</button></div>
+          </div>
           <div class="field-group"><label>月租预算 <span class="unit">元 / 月</span></label><div class="range-inputs"><input id="rentMin" type="number" min="0" step="100" placeholder="最低" aria-label="最低月租" /><span>至</span><input id="rentMax" type="number" min="0" step="100" placeholder="最高" aria-label="最高月租" /></div><p class="validation-message" id="rentValidation" role="alert" hidden></p><div class="range-hint"><button type="button" data-rent="0,4000">4k 以下</button><button type="button" data-rent="4000,6000">4–6k</button><button type="button" data-rent="6000,9000">6–9k</button><button type="button" data-rent="9000,20000">9k 以上</button></div></div>
           <div class="field-group split-fields"><div><label for="layoutSelect">户型</label><select id="layoutSelect"><option value="">不限户型</option><option value="一室一厅">一室一厅</option><option value="两室一厅">两室一厅</option><option value="三室一厅">三室一厅</option><option value="开间">开间</option><option value="合租">合租</option></select></div><div><label for="areaSelect">面积</label><select id="areaSelect"><option value="">不限面积</option><option value="0,40">40㎡ 以下</option><option value="40,60">40–60㎡</option><option value="60,90">60–90㎡</option><option value="90,9999">90㎡ 以上</option></select></div></div>
           <div class="field-group"><label>自定义面积 <span class="unit">㎡ · 优先于预设</span></label><div class="range-inputs"><input id="areaMin" type="number" min="0" step="1" placeholder="最小" aria-label="最小面积" /><span>至</span><input id="areaMax" type="number" min="0" step="1" placeholder="最大" aria-label="最大面积" /></div><p class="validation-message" id="areaValidation" role="alert" hidden></p></div>
           <div class="field-group"><label for="pagesSelect">抓取页数 <span class="unit">每个平台</span></label><select id="pagesSelect"><option value="1">1 页</option><option value="2">2 页</option><option value="3">3 页</option></select></div>
-          <div class="field-group commute-field"><label for="commuteInput">通勤地点 <span class="unit">可选</span></label><div class="input-with-icon"><i data-lucide="briefcase-business" aria-hidden="true"></i><input id="commuteInput" type="text" placeholder="国贸、望京 SOHO" /></div></div>
+          <div class="field-group commute-field">
+            <div class="field-label-row">
+              <label for="commuteInput">目标具体位置 <span class="unit">用于距离筛选</span></label>
+              <button type="button" class="text-button locate-btn" id="locateCommuteBtn" title="获取当前位置填入目标具体位置"><i data-lucide="locate-fixed" aria-hidden="true"></i>定位当前地点</button>
+            </div>
+            <div class="input-with-icon"><i data-lucide="briefcase-business" aria-hidden="true"></i><input id="commuteInput" type="text" placeholder="如：国贸、望京 SOHO，或点击定位" /></div>
+          </div>
           <div class="field-group commute-range-field">
-            <label for="commuteMaxKm">通勤范围 <span class="unit">直线距离 · 公里</span></label>
-            <div class="commute-range-controls"><input id="commuteMaxKm" type="number" min="0.1" max="100" step="0.1" placeholder="不限距离" aria-label="最大通勤直线距离（公里）" /><button class="icon-button" id="clearCommuteRange" type="button" title="取消距离限制" aria-label="取消距离限制"><i data-lucide="x" aria-hidden="true"></i></button></div>
-            <div class="quick-tags" aria-label="通勤距离快捷选项"><button type="button" data-distance="1">1 公里</button><button type="button" data-distance="3">3 公里</button><button type="button" data-distance="5">5 公里</button><button type="button" data-distance="10">10 公里</button></div>
+            <label for="commuteMaxKm">距离范围 <span class="unit">直线距离 · 公里</span></label>
+            <div class="commute-range-controls"><input id="commuteMaxKm" type="number" min="0.1" max="100" step="0.1" placeholder="不限距离" aria-label="最大直线距离（公里）" /><button class="icon-button" id="clearCommuteRange" type="button" title="取消距离限制" aria-label="取消距离限制"><i data-lucide="x" aria-hidden="true"></i></button></div>
+            <div class="quick-tags" aria-label="距离快捷选项"><button type="button" data-distance="1">1 公里</button><button type="button" data-distance="3">3 公里</button><button type="button" data-distance="5">5 公里</button><button type="button" data-distance="10">10 公里</button></div>
             <p class="validation-message" id="commuteValidation" role="alert" hidden></p>
-            <button class="secondary-button full-width commute-calculate" id="calculateCommuteBtn" type="button"><i data-lucide="locate-fixed" aria-hidden="true"></i>计算通勤距离</button>
+            <button class="secondary-button full-width commute-calculate" id="calculateCommuteBtn" type="button"><i data-lucide="locate-fixed" aria-hidden="true"></i>计算距离范围</button>
             <p id="commuteStatus" class="commute-status" role="status" aria-live="polite">距离未计算</p>
             <span class="map-attribution">地图数据 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap</a></span>
           </div>

@@ -58,6 +58,72 @@ function addressQuery(value, city) {
   return query;
 }
 
+const SUPPORTED_CITIES = Object.freeze([
+  '北京', '上海', '广州', '深圳', '杭州', '成都', '南京', '武汉', '西安', '重庆',
+  '天津', '苏州', '厦门', '济南', '郑州', '青岛', '宁波', '无锡', '昆明', '福州',
+  '长沙', '合肥', '佛山', '东莞', '香港'
+]);
+
+function findSupportedCity(text = '') {
+  const str = String(text || '');
+  return SUPPORTED_CITIES.find(city => str.includes(city)) || '';
+}
+
+function parsePhotonReverse(props, lat, lon) {
+  if (!props || typeof props !== 'object') return null;
+  const stateCity = findSupportedCity(props.state || '');
+  const cityCity = findSupportedCity(props.city || '');
+  const regionCity = findSupportedCity([props.county, props.district].join(' '));
+  const city = stateCity || cityCity || regionCity || (props.city || props.state || '').replace(/市$/, '');
+  let district = '';
+  if (stateCity && props.city && /[区县]/.test(props.city)) {
+    district = props.city;
+  } else if (props.district) {
+    district = props.district.replace(/(?:街道|社区|办事处)$/, '区');
+    if (!district.endsWith('区') && !district.endsWith('县')) district += '区';
+  } else if (props.county) {
+    district = props.county;
+  }
+  let address = props.name || props.street || props.locality || '';
+  if (props.street && props.name && props.name !== props.street) {
+    address = props.name.includes(props.street) ? props.name : `${props.street}${props.name}`;
+  }
+  const cityFormatted = district ? `${city} · ${district}` : city;
+  return {
+    city,
+    district,
+    cityFormatted: cityFormatted || city,
+    address: address || cityFormatted || '当前位置',
+    formatted: [cityFormatted, address].filter(Boolean).join(' '),
+    latitude: lat,
+    longitude: lon,
+    provider: 'photon',
+  };
+}
+
+function parseAmapReverse(payload, lat, lon) {
+  const comp = payload?.regeocode?.addressComponent || {};
+  const formattedAddress = payload?.regeocode?.formatted_address || '';
+  const stateCity = findSupportedCity(comp.province || '');
+  const cityCity = findSupportedCity(typeof comp.city === 'string' ? comp.city : '');
+  const city = stateCity || cityCity || (typeof comp.city === 'string' && comp.city ? comp.city.replace(/市$/, '') : (comp.province || '').replace(/市$/, ''));
+  const district = typeof comp.district === 'string' ? comp.district : '';
+  const township = typeof comp.township === 'string' ? comp.township : '';
+  const poi = comp.neighborhood?.name || comp.building?.name || (comp.streetNumber ? `${comp.streetNumber.street}${comp.streetNumber.number || ''}` : '');
+  const cityFormatted = district ? `${city} · ${district}` : city;
+  let address = poi || township || formattedAddress.replace(comp.province || '', '').replace(comp.city || '', '').replace(district, '');
+  return {
+    city,
+    district,
+    cityFormatted: cityFormatted || city,
+    address: address || cityFormatted || '当前位置',
+    formatted: formattedAddress || [cityFormatted, address].filter(Boolean).join(' '),
+    latitude: lat,
+    longitude: lon,
+    provider: 'amap',
+  };
+}
+
 function chooseMatch(matches) {
   if (!matches.length) return null;
   const first = matches[0];
@@ -163,13 +229,110 @@ function createCommuteService(options = {}) {
     try { return await promise; } finally { pending.delete(key); }
   }
 
+  async function reverseGeocode(input = {}) {
+    const point = coordinates(input);
+    if (!point) throw apiError(400, '经纬度参数无效。', 'INVALID_COORDINATES');
+    const key = `rev:${point.latitude.toFixed(5)},${point.longitude.toFixed(5)}`;
+    const old = cache.get(key);
+    if (old && old.expires > now()) return old.value;
+    if (pending.has(key)) return pending.get(key);
+
+    const promise = (async () => {
+      let result = null;
+      if (apiKey) {
+        const url = new URL('https://restapi.amap.com/v3/geocode/regeo');
+        url.searchParams.set('key', apiKey);
+        url.searchParams.set('location', `${point.longitude},${point.latitude}`);
+        url.searchParams.set('extensions', 'base');
+        try {
+          const payload = await request(url.toString());
+          if (String(payload?.status) === '1' && payload?.regeocode) {
+            result = parseAmapReverse(payload, point.latitude, point.longitude);
+          }
+        } catch (_) {}
+      }
+      if (!result) {
+        const url = new URL('https://photon.komoot.io/reverse');
+        url.searchParams.set('lat', String(point.latitude));
+        url.searchParams.set('lon', String(point.longitude));
+        const payload = await request(url.toString());
+        result = parsePhotonReverse(payload?.features?.[0]?.properties, point.latitude, point.longitude);
+      }
+      if (!result) throw apiError(404, '未能根据该经纬度解析到具体地点。', 'LOCATION_NOT_FOUND');
+      cache.set(key, { value: result, expires: now() + ttlMs });
+      while (cache.size > maxCache) cache.delete(cache.keys().next().value);
+      return result;
+    })();
+
+    pending.set(key, promise);
+    try { return await promise; } finally { pending.delete(key); }
+  }
+
+  async function locateIp() {
+    if (apiKey) {
+      const url = new URL('https://restapi.amap.com/v3/ip');
+      url.searchParams.set('key', apiKey);
+      try {
+        const payload = await request(url.toString());
+        if (String(payload?.status) === '1' && payload?.city && typeof payload?.city === 'string') {
+          const city = findSupportedCity(payload.city) || payload.city.replace(/市$/, '');
+          const district = typeof payload.district === 'string' ? payload.district : '';
+          const cityFormatted = district && district !== city ? `${city} · ${district}` : city;
+          let lat = null, lon = null;
+          if (payload.rectangle && typeof payload.rectangle === 'string') {
+            const parts = payload.rectangle.split(';')[0]?.split(',');
+            if (parts && parts.length === 2) {
+              lon = Number(parts[0]);
+              lat = Number(parts[1]);
+            }
+          }
+          return {
+            city,
+            district,
+            cityFormatted,
+            address: cityFormatted,
+            formatted: cityFormatted,
+            latitude: lat,
+            longitude: lon,
+            provider: 'amap-ip',
+          };
+        }
+      } catch (_) {}
+    }
+    const url = 'http://ip-api.com/json/?lang=zh-CN';
+    try {
+      const payload = await request(url);
+      if (payload?.status === 'success') {
+        const region = [payload.regionName, payload.city].join(' ');
+        const city = findSupportedCity(region) || payload.city;
+        const cityFormatted = city;
+        return {
+          city,
+          district: '',
+          cityFormatted,
+          address: cityFormatted,
+          formatted: `${payload.country || ''} ${cityFormatted}`.trim(),
+          latitude: payload.lat,
+          longitude: payload.lon,
+          provider: 'ip-api',
+        };
+      }
+    } catch (_) {}
+    throw apiError(503, '网络定位服务暂不可用，请手动输入地点。', 'IP_LOCATION_FAILED');
+  }
+
   async function calculate(input = {}) {
     const city = compact(input.city), commute = String(input.commute || '').trim();
     if (!city || city.length > 80 || !commute || commute.length > 200 || !Array.isArray(input.listings)) throw apiError(400, '请填写城市、通勤地点和房源列表。', 'INVALID_COMMUTE_INPUT');
     if (input.listings.length > 10) throw apiError(400, '每次最多计算 10 套房源的距离。', 'COMMUTE_BATCH_LIMIT');
-    let target;
-    try { target = await geocode(city, commute); }
-    catch (_) { throw apiError(503, '地址服务暂不可用，请稍后重试，或填写通勤地点的“经度,纬度”。', 'GEOCODE_UNAVAILABLE'); }
+    let target = coordinates(input.targetCoordinates);
+    if (target) {
+      target = { ...target, label: commute || `${target.longitude},${target.latitude}`, provider: 'coordinates', coordinateSystem: 'wgs84' };
+    }
+    if (!target) {
+      try { target = await geocode(city, commute); }
+      catch (_) { throw apiError(503, '地址服务暂不可用，请稍后重试，或填写通勤地点的“经度,纬度”。', 'GEOCODE_UNAVAILABLE'); }
+    }
     if (!target) throw apiError(422, '无法准确定位通勤地点，请填写具体地址、地标，或“经度,纬度”。', 'COMMUTE_NOT_FOUND');
     const key = targetKey(input.city, input.commute);
     const results = await Promise.all(input.listings.map(async listing => {
@@ -191,7 +354,7 @@ function createCommuteService(options = {}) {
     return { target: { ...target, key, city: input.city, query: commute }, listings: results, message: '距离为直线距离；无法准确定位的房源不计入距离范围。' };
   }
 
-  return { calculate };
+  return { calculate, reverseGeocode, locateIp, geocode };
 }
 
-module.exports = { createCommuteService, targetKey };
+module.exports = { createCommuteService, targetKey, SUPPORTED_CITIES };

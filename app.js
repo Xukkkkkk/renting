@@ -58,6 +58,7 @@
     searching: false,
     commuteRun: null,
     commuteTarget: null,
+    commuteCoordinates: null,
     commuteError: ""
   };
 
@@ -143,6 +144,7 @@
     if (previousTarget !== currentCommuteKey()) {
       cancelCommute();
       state.commuteTarget = null;
+      state.commuteCoordinates = null;
       state.commuteError = "";
     }
     persist();
@@ -276,9 +278,16 @@
         if (state.commuteRun !== run || currentCommuteKey() !== key) return;
         const batch = candidates.slice(offset, offset + 5);
         const signatures = new Map(batch.map(item => [item.id, commuteAddress(item)]));
+        const batchBody = {
+          city, commute,
+          listings: batch.map(item => ({ id: item.id, city: item.city, address: item.location, ...(item.coordinates ? { coordinates: item.coordinates } : {}) }))
+        };
+        if (state.commuteCoordinates) {
+          batchBody.targetCoordinates = state.commuteCoordinates;
+        }
         const payload = await fetchJson("/api/commute", {
           method: "POST", headers: { "Content-Type": "application/json" }, signal: run.controller.signal,
-          body: JSON.stringify({ city, commute, listings: batch.map(item => ({ id: item.id, city: item.city, address: item.location, ...(item.coordinates ? { coordinates: item.coordinates } : {}) })) })
+          body: JSON.stringify(batchBody)
         });
         if (state.commuteRun !== run || currentCommuteKey() !== key) return;
         if (payload.target?.key !== key || !Array.isArray(payload.listings)) throw new Error("定位结果与当前通勤地点不一致，请重试");
@@ -301,7 +310,7 @@
     } finally {
       if (state.commuteRun === run) {
         state.commuteRun = null; render();
-        if (!state.commuteError && numberOrNull(state.filters.commuteMaxKm) !== null && validateFilters(false)) void calculateCommute();
+        if (!state.commuteError && state.filters.commute && cityParts(state.filters.city).city && validateFilters(false)) void calculateCommute();
       }
     }
   }
@@ -529,7 +538,96 @@
       state.searchStatus = "error"; render(); $("#lastRun").textContent = "获取失败"; showToast(`获取失败：${error.message}`);
     } finally {
       state.searching = false; button.disabled = false; button.innerHTML = `${icon("search")} 开始自动获取`; updateIcons();
-      if (numberOrNull(state.filters.commuteMaxKm) !== null && validateFilters(false)) await calculateCommute();
+      if (state.filters.commute && cityParts(state.filters.city).city && validateFilters(false)) await calculateCommute();
+    }
+  }
+
+  async function locateUser() {
+    const buttons = [$("#locateCityBtn"), $("#locateCommuteBtn")].filter(Boolean);
+    buttons.forEach(btn => {
+      btn.disabled = true;
+      btn.innerHTML = `${icon("loader-circle")} 正在定位…`;
+    });
+    updateIcons();
+
+    function getBrowserCoords() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error("浏览器不支持定位功能"));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 8000,
+          maximumAge: 60000,
+        });
+      });
+    }
+
+    try {
+      let location = null;
+      let geoError = null;
+      try {
+        const position = await getBrowserCoords();
+        const payload = await fetchJson("/api/location", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          })
+        });
+        location = payload?.location;
+      } catch (err) {
+        geoError = err;
+      }
+
+      if (!location) {
+        try {
+          const payload = await fetchJson("/api/location", { method: "GET" });
+          location = payload?.location;
+        } catch (_) {
+          throw geoError || new Error("网络定位服务不可用");
+        }
+      }
+
+      if (!location || !location.cityFormatted) {
+        throw new Error("未能识别出当前城市，请手动输入");
+      }
+
+      $("#cityInput").value = location.cityFormatted;
+      if (location.address || location.formatted) {
+        $("#commuteInput").value = location.address || location.formatted;
+      }
+      if (!$("#commuteMaxKm").value) {
+        $("#commuteMaxKm").value = "5";
+      }
+
+      if (location.latitude && location.longitude) {
+        state.commuteCoordinates = {
+          latitude: location.latitude,
+          longitude: location.longitude,
+        };
+      }
+
+      readFilters();
+      if (validateFilters(false)) {
+        persist();
+        render();
+        const addrDesc = location.address ? ` ${location.address}` : "";
+        showToast(`已成功定位：${location.cityFormatted}${addrDesc}，已设置 5km 距离范围`);
+        if (state.listings.length > 0) {
+          void calculateCommute(true);
+        }
+      }
+    } catch (error) {
+      showToast(`定位获取失败：${error.message || "请检查浏览器权限或手动输入地点"}`);
+    } finally {
+      buttons.forEach(btn => {
+        btn.disabled = false;
+        btn.innerHTML = `${icon("locate-fixed")} 定位当前地点`;
+      });
+      updateIcons();
     }
   }
 
@@ -597,17 +695,17 @@
     $("#filtersForm").addEventListener("submit", event => {
       event.preventDefault(); readFilters(); if (!validateFilters(false)) { showToast("请先修正筛选条件"); return; }
       state.favoriteOnly = false; render(); showToast("筛选条件已应用");
-      if (numberOrNull(state.filters.commuteMaxKm) !== null) void calculateCommute();
+      if (numberOrNull(state.filters.commuteMaxKm) !== null || state.filters.commute) void calculateCommute();
     });
     $("#resetFilters").addEventListener("click", () => {
-      cancelCommute(); state.commuteError = ""; state.commuteTarget = null;
+      cancelCommute(); state.commuteError = ""; state.commuteTarget = null; state.commuteCoordinates = null;
       state.filters = { city: "", rentMin: "", rentMax: "", layout: "", area: "", areaMin: "", areaMax: "", commute: "", commuteMaxKm: "", pages: "1", sources: [...SOURCES] }; state.favoriteOnly = false; applyFiltersToForm(); validateFilters(false); persist(); render(); showToast("筛选条件已重置");
     });
     const applyQuietly = () => {
       readFilters();
       if (validateFilters(false)) {
         render();
-        if (numberOrNull(state.filters.commuteMaxKm) !== null) void calculateCommute();
+        if (numberOrNull(state.filters.commuteMaxKm) !== null || state.filters.commute) void calculateCommute();
       }
     };
     $$('[data-city]').forEach(button => button.addEventListener("click", () => { $("#cityInput").value = button.dataset.city; applyQuietly(); }));
@@ -617,12 +715,14 @@
     $$('[data-distance]').forEach(button => button.addEventListener("click", () => { $("#commuteMaxKm").value = button.dataset.distance; applyQuietly(); }));
     $("#clearCommuteRange").addEventListener("click", () => { $("#commuteMaxKm").value = ""; applyQuietly(); });
     $("#calculateCommuteBtn").addEventListener("click", () => { readFilters(); if (validateFilters(false)) void calculateCommute(true); });
+    $("#locateCityBtn")?.addEventListener("click", locateUser);
+    $("#locateCommuteBtn")?.addEventListener("click", locateUser);
     $("#runSearchBtn").addEventListener("click", runSearchTask);
     $("#sortSelect").addEventListener("change", event => { state.sort = event.target.value; render(); });
     $$('[data-view]').forEach(button => button.addEventListener("click", () => { state.view = button.dataset.view; $$('[data-view]').forEach(item => item.classList.toggle("active", item === button)); render(); }));
     $("#showFavorites").addEventListener("click", () => {
       state.favoriteOnly = !state.favoriteOnly; render();
-      if (numberOrNull(state.filters.commuteMaxKm) !== null && validateFilters(false)) void calculateCommute();
+      if (numberOrNull(state.filters.commuteMaxKm) !== null || state.filters.commute) void calculateCommute();
     });
     $("#exportCsvBtn").addEventListener("click", exportCsv);
     $("#resultsList").addEventListener("click", event => { const action = event.target.closest("[data-action]"); if (!action) return; const card = event.target.closest("[data-id]"); const item = state.listings.find(listing => listing.id === card?.dataset.id); if (!item) return; if (action.dataset.action === "favorite") { item.favorite = !item.favorite; persist(); render(); showToast(item.favorite ? "已收藏房源" : "已取消收藏"); } if (action.dataset.action === "remove") { state.listings = state.listings.filter(listing => listing.id !== item.id); persist(); render(); showToast("房源已移除"); } });

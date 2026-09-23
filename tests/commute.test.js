@@ -121,3 +121,38 @@ test('AMap administrative geocodes are rejected and GCJ02 points become WGS84', 
   broad = true;
   await assert.rejects(service.calculate({ city: '北京', commute: '新的地点', listings: [] }), { status: 422 });
 });
+
+test('reverseGeocode resolves coordinates to city, district and address', async () => {
+  const service = makeService(async url => {
+    assert.match(url, /reverse\?lat=39\.9042&lon=116\.4074/);
+    return reply({
+      properties: {
+        city: '北京市',
+        district: '东城区',
+        street: '台基厂头条',
+        name: '台基厂头条14号院-10号院',
+      }
+    });
+  });
+  const loc = await service.reverseGeocode({ latitude: 39.9042, longitude: 116.4074 });
+  assert.equal(loc.city, '北京');
+  assert.equal(loc.district, '东城区');
+  assert.equal(loc.cityFormatted, '北京 · 东城区');
+  assert.match(loc.address, /台基厂头条/);
+  assert.equal(loc.latitude, 39.9042);
+  assert.equal(loc.longitude, 116.4074);
+  await assert.rejects(service.reverseGeocode({ latitude: 'invalid' }), { status: 400 });
+});
+
+test('targetCoordinates can bypass commute text geocoding and calculate distance directly', async () => {
+  const service = makeService(() => { throw new Error('geocoder should not be called'); });
+  const result = await service.calculate({
+    city: '北京',
+    commute: '我的定位地点',
+    targetCoordinates: { latitude: 39.9, longitude: 116.4 },
+    listings: [{ id: 1, longitude: 116.41, latitude: 39.9 }]
+  });
+  assert.equal(result.target.provider, 'coordinates');
+  assert.ok(result.listings[0].distanceKm > 0.8 && result.listings[0].distanceKm < 0.9);
+});
+
